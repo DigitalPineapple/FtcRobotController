@@ -14,7 +14,8 @@ in Sloth, so use Slothboard rather than installing standard FTC Dashboard alongs
 it. The dependency is declared in `build.dependencies.gradle` and uses the existing
 Dairy Maven repository. Java imports remain under `com.acmerobotics.dashboard`.
 
-To try live configuration without moving any hardware:
+To try live configuration without moving any hardware, temporarily remove
+`@Disabled` from `DashboardTest` before deploying:
 
 1. Fully deploy TeamCode from Android Studio after changing dependencies.
 2. Connect your computer to the Control Hub's Wi-Fi and open
@@ -34,6 +35,64 @@ do not modify Java source defaults or persist across app restarts.
 
 Build the app locally with `./gradlew :TeamCode:assembleDebug` from the repository
 root.
+
+## Gaming TeleOp
+
+**Gaming TeleOp** is the only enabled team OpMode. Other team OpModes have
+`@Disabled`; remove that annotation to re-enable one. Pedro tuning registration
+is also disabled; restore `@Tuner` on the factory methods in `pedro/Tuning.java`
+and its import to re-enable the tuning procedures.
+
+Select **Gaming TeleOp** on the Driver Station for robot-centric driving through
+Pedro Pathing. Gamepad 1's left stick moves the robot forward/backward and
+strafes left/right relative to the robot; the right stick's horizontal axis turns
+it left/right. Stopping the OpMode zeros drivetrain power.
+
+This OpMode uses the drivetrain and Pinpoint hardware configured in
+`pedro/Constants.java`.
+It also requires servos named `pollenGateServo`, `nectarGateServo`, and
+`flowerServo`, and reports their last commanded positions (0-1) in telemetry
+and commands both gates closed and the flower servo up during initialization.
+These values are not measured physical positions.
+Each press of gamepad 1's **B** button toggles `flowerServo` between
+`RobotConfig.FLOWER_SERVO_DOWN_POSITION` (default 0.53) and
+`RobotConfig.FLOWER_SERVO_UP_POSITION` (default 0.0), starting with down on
+the first press. Edit these fields under **RobotConfig** in the dashboard and
+save changes; the next B press uses the latest value for its selected endpoint.
+Keep positions in the 0-1 range. The former minimum is up; the former maximum
+is down.
+Holding B does not repeatedly toggle it.
+
+Each press of gamepad 1's **A** button toggles both gate servos between open and
+closed, starting with open on the first press. Each gate has independent
+dashboard endpoints: `POLLEN_GATE_SERVO_CLOSED_POSITION`,
+`POLLEN_GATE_SERVO_OPEN_POSITION`, `NECTAR_GATE_SERVO_CLOSED_POSITION`, and
+`NECTAR_GATE_SERVO_OPEN_POSITION` under **RobotConfig**. These replace the old
+min/max fields, preserving min as closed and max as open. Pollen currently has
+both endpoints at 0.0; nectar is closed at 0.37 and open at 0.52.
+Saved dashboard edits apply on the next A press; holding A does not repeatedly
+toggle the gates. Telemetry reports the commanded open/closed state.
+
+Gamepad 1's **RT** toggles the motor named `intakeMotor` on/off when the trigger
+crosses above 0.5. Release it to 0.5 or below before pressing again; holding RT
+does not repeatedly toggle. Intake power comes from **RobotConfig > INTAKE_POWER**
+(default 0.5, valid range -1 to 1). Saved dashboard edits apply while the intake
+is running. The intake starts off and is powered off when the OpMode stops.
+Telemetry displays its enabled state and commanded power.
+
+Gamepad 1's **RB** toggles the motor named `elevatorMotor` on/off once per press.
+Power comes from **RobotConfig > ELEVATOR_POWER** (default 0.5, valid range -1 to
+1), with saved dashboard edits applied while running. The elevator starts off,
+is powered off when the OpMode stops, and reports its enabled state and commanded
+power in telemetry. Holding RB does not repeatedly toggle it.
+
+Gamepad 1's **Y** toggles `pollenFlywheelMotor` and `nectarFlywheelMotor` on/off
+together once per press. Each has independent power under **RobotConfig**:
+`POLLEN_FLYWHEEL_POWER` and `NECTAR_FLYWHEEL_POWER` (both default 0.0, valid range
+-1 to 1). With the defaults, enabling the flywheels does not spin them. Saved
+dashboard edits apply while enabled. Both start off and are powered off when
+the OpMode stops. Telemetry displays the shared enabled state and each motor's
+commanded power. Holding Y does not repeatedly toggle them.
 
 ## Creating your own OpModes
 
