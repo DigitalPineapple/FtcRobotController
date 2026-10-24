@@ -127,6 +127,7 @@ public class ExampleAuto extends OpMode {
         follower.update();
         Scheduler.execute();
 
+       feature/CreateNewAuto
         double x = follower.pose().x();
         double y = follower.pose().y();
 
@@ -211,5 +212,17 @@ public class ExampleAuto extends OpMode {
         if (nectorGateServo != null) {
             nectorGateServo.setPosition(NECTOR_GATE_CLOSED);
         }
+
+        telemetry.addData("X", follower.pose().x());
+        telemetry.addData("Y", follower.pose().y());
+        telemetry.addData("Heading", Math.toDegrees(follower.pose().heading()));
+        telemetry.addData("Follower Mode", follower.mode());
+        telemetry.update();
+
+    }
+
+    public Pose getMidPose() {
+        return midPose;
+        master
     }
 }
