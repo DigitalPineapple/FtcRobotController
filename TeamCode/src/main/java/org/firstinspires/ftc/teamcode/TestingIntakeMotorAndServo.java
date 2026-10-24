@@ -19,9 +19,6 @@ public class TestingIntakeMotorAndServo extends LinearOpMode {
     private boolean lastButtonState = false;
 
     // Servo States
-    private boolean servoMoved = false;
-    private boolean servoLastButtonState = false;
-
     @Override
     public void runOpMode() {
         intakeMotor = hardwareMap.get(DcMotor.class, "IntakeMotor");
@@ -52,22 +49,15 @@ public class TestingIntakeMotorAndServo extends LinearOpMode {
                 intakeMotor.setPower(0.0);
                 elevatorMotor.setPower(0.0);
             }
-
-            // --- Servo Toggle Control (Y Button) ---
-            boolean servoCurrentButtonState = gamepad1.y;
-
-            // Only triggers on the exact frame the button is pressed (Rising Edge)
-            if (servoCurrentButtonState && !servoLastButtonState) {
-                servoMoved = !servoMoved; // Flip tracking state
-
-                if (servoMoved) {
-                    intakeServo.setPosition(0.5); // Adjusted to 50% travel for a visible movement test
-                } else {
-                    intakeServo.setPosition(0.0); // Reset to 0% travel
-                }
+            double currentServoPosition = 0.0;
+            if (gamepad1.dpad_up) {
+                currentServoPosition += 0.002;
+            } else if (gamepad1.dpad_down) {
+                currentServoPosition -= 0.002;
             }
-            // Updates button history for the next frame loop
-            servoLastButtonState = servoCurrentButtonState;
+            currentServoPosition = Math.max(0.0, Math.min(1.0, currentServoPosition));
+
+            intakeServo.setPosition(currentServoPosition);
 
             // --- Telemetry ---
             telemetry.addData("Servo Position", intakeServo.getPosition());
