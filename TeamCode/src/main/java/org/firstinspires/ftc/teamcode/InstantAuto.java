@@ -17,7 +17,7 @@ import static com.pedropathing.ivy.pedro.PedroCommands.follow;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 @Autonomous(name="Robot: Example Auto", group="Robot")
-public class ExampleAuto extends OpMode {
+public class InstantAuto extends OpMode {
     private Follower follower;
     private final PoseFactory poseFactory = PoseFactory.degrees();
 
@@ -25,7 +25,7 @@ public class ExampleAuto extends OpMode {
     private final Pose startPose = poseFactory.of(0, 0, 0);
     private final Pose scorePose = poseFactory.of(40, 0, 90);
     private final Pose midPose = poseFactory.of(10,0,90);
-    private final Pose parkPose = poseFactory.of(0, 46, 90);
+    private final Pose parkPose = poseFactory.of(0, 80, 90);
 
 
     // Path methods
@@ -77,5 +77,13 @@ public class ExampleAuto extends OpMode {
 
     public Pose getMidPose() {
         return midPose;
+    }
+
+    @Override
+    public void stop() {
+        // Automatically grabs and saves the final coordinates when the match ends
+        if (follower != null) {
+            OpModeStorage.autonomousEndPose = follower.pose();
+        }
     }
 }
