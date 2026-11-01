@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode;
 import com.pedropathing.drivetrain.DrivePowers;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.follower.ManualDrive;
+import com.pedropathing.localization.Pose; // Imported for creating the reset pose
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -36,6 +37,9 @@ public class QualifierTeleOpFieldCentric extends OpMode {
     // Toggle state variables for the shooter flywheels (Right Trigger)
     private boolean shooterIsSpinning = false;
     private boolean lastShooterTriggerState = false;
+
+    // Toggle state variable for the heading reset (Options Button)
+    private boolean lastOptionsButton = false;
 
     @Override
     public void init() {
@@ -81,12 +85,24 @@ public class QualifierTeleOpFieldCentric extends OpMode {
 
     @Override
     public void loop() {
+        // 0. SINGLE-CLICK HEADING RESET LOGIC (Gamepad 1 Options Button)
+        boolean currentOptionsButton = gamepad1.options;
+        if (currentOptionsButton && !lastOptionsButton) {
+            // Pull current X and Y coordinates to preserve coordinate positioning
+            double currentX = follower.pose().x();
+            double currentY = follower.pose().y();
+
+            // Re-apply pose with 0 degrees (0 radians) facing straight forward field-wise
+            Pose resetPose = new Pose(currentX, currentY, 0.0);
+            follower.setPose(resetPose);
+        }
+        lastOptionsButton = currentOptionsButton;
+
         // 1. DRIVETRAIN (Pedro Pathing Field-Centric)
-        // Fixed to use .heading() to resolve compilation errors
         DrivePowers powers = ManualDrive.fieldCentric(
-                -gamepad1.left_stick_y,
-                gamepad1.left_stick_x,
-                gamepad1.right_stick_x,
+                -gamepad1.left_stick_x,
+                gamepad1.left_stick_y,
+                -gamepad1.right_stick_x,
                 follower.pose().heading()
         );
         follower.manual(powers);
@@ -154,7 +170,6 @@ public class QualifierTeleOpFieldCentric extends OpMode {
         }
 
         // 8. TELEMETRY MONITORING
-        // Fixed to use Pedro's native field methods: .x(), .y(), and .heading()
         telemetry.addData("X Position", "%.2f in", follower.pose().x());
         telemetry.addData("Y Position", "%.2f in", follower.pose().y());
         telemetry.addData("Heading", "%.2f deg", Math.toDegrees(follower.pose().heading()));

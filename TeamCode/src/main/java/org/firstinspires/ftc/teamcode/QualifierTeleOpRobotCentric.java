@@ -71,8 +71,8 @@ public class QualifierTeleOpRobotCentric extends OpMode {
         // 1. DRIVETRAIN (Pedro Pathing Robot-Centric)
         follower.manual(
                 -gamepad1.left_stick_y, // Drive Forward/Backward
-                gamepad1.left_stick_x,  // Strafe Left/Right
-                gamepad1.right_stick_x  // Turn Left/Right
+                -gamepad1.left_stick_x,  // Strafe Left/Right
+                -gamepad1.right_stick_x  // Turn Left/Right
         );
         follower.update();
 

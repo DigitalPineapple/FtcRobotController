@@ -9,10 +9,10 @@ public class RobotConfig {
     public static int TEST_VALUE = 42;
     public static double ELEVATOR_POWER = 1;
     public static double INTAKE_POWER = -1;
-    public static double POLLEN_FLYWHEEL_VELOCITY = 1950;
-    public static double NECTAR_FLYWHEEL_VELOCITY = -2000;
+    public static double POLLEN_FLYWHEEL_VELOCITY = 1900;
+    public static double NECTAR_FLYWHEEL_VELOCITY = -1900;
     public static double FLOWER_SERVO_UP_POSITION = 1.0;
-    public static double FLOWER_SERVO_DOWN_POSITION = 0.37;
+    public static double FLOWER_SERVO_DOWN_POSITION = 0.25;
     public static double POLLEN_GATE_SERVO_CLOSED_POSITION = 0.8;
     public static double POLLEN_GATE_SERVO_OPEN_POSITION = 1.0;
     public static double NECTAR_GATE_SERVO_CLOSED_POSITION = 0.52;
