@@ -1,24 +1,28 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.pedropathing.drivetrain.DrivePowers;
 import com.pedropathing.follower.Follower;
+import com.pedropathing.follower.ManualDrive;
+import com.pedropathing.localization.Pose; // Imported for creating the reset pose
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
-@TeleOp(name = "Robot Scrimmage TeleOp")
-public class ScrimmageTeleOpRobotCentric extends OpMode {
+@TeleOp(name = "Field Qualifier TeleOp")
+public class QualifierTeleOpFieldCentric extends OpMode {
 
     private Follower follower;
     private ElapsedTime runtime = new ElapsedTime();
     private DcMotor intakeMotor;
     private Servo flowerServo;
     private DcMotor elevatorMotor;
-    private DcMotor pollenFlywheelMotor;
-    private DcMotor nectarFlywheelMotor;
+    private DcMotorEx pollenFlywheelMotor;
+    private DcMotorEx nectarFlywheelMotor;
     private Servo pollenGateServo;
     private Servo nectarGateServo;
 
@@ -34,13 +38,8 @@ public class ScrimmageTeleOpRobotCentric extends OpMode {
     private boolean shooterIsSpinning = false;
     private boolean lastShooterTriggerState = false;
 
-    // Toggle state variables for Pollen Gate (Button X)
-    private boolean pollengateIsOpen = false;
-    private boolean lastXButtonState = false;
-
-    // Toggle state variables for Nectar Gate (Button B)
-    private boolean nectargateIsOpen = false;
-    private boolean lastBButtonState = false;
+    // Toggle state variable for the heading reset (Options Button)
+    private boolean lastOptionsButton = false;
 
     @Override
     public void init() {
@@ -51,37 +50,62 @@ public class ScrimmageTeleOpRobotCentric extends OpMode {
         flowerServo = hardwareMap.get(Servo.class, "flowerServo");
         elevatorMotor = hardwareMap.get(DcMotor.class, "elevatorMotor");
 
-        nectarFlywheelMotor = hardwareMap.get(DcMotor.class, "nectarFlywheelMotor");
-        pollenFlywheelMotor = hardwareMap.get(DcMotor.class, "pollenFlywheelMotor");
+        nectarFlywheelMotor = hardwareMap.get(DcMotorEx.class, "nectarFlywheelMotor");
+        pollenFlywheelMotor = hardwareMap.get(DcMotorEx.class, "pollenFlywheelMotor");
 
         pollenGateServo = hardwareMap.get(Servo.class, "pollenGateServo");
         nectarGateServo = hardwareMap.get(Servo.class, "nectarGateServo");
 
         flowerServo.setDirection(Servo.Direction.REVERSE);
 
-        // Intialize gates to closed positions immediately
+        // Initialize gates to closed positions immediately
         pollenGateServo.setPosition(RobotConfig.POLLEN_GATE_SERVO_CLOSED_POSITION);
         nectarGateServo.setPosition(RobotConfig.NECTAR_GATE_SERVO_CLOSED_POSITION);
         flowerServo.setPosition(RobotConfig.FLOWER_SERVO_UP_POSITION);
 
         telemetry.addData("Status", "Initialized");
+        telemetry.addData("Stored Auto End Pose", "X: %.2f, Y: %.2f, Heading: %.2f deg",
+                OpModeStorage.autonomousEndPose.x(),
+                OpModeStorage.autonomousEndPose.y(),
+                Math.toDegrees(OpModeStorage.autonomousEndPose.heading())
+        );
         telemetry.update();
     }
 
     @Override
     public void start() {
+        follower.setPose(OpModeStorage.autonomousEndPose);
+        follower.update();
         runtime.reset();
+
+        telemetry.clearAll();
+        telemetry.addLine("TeleOp Started with Autonomous Final Pose!");
+        telemetry.update();
     }
 
     @Override
     public void loop() {
-        // 1. DRIVETRAIN (Pedro Pathing Robot-Centric)
-        follower.manual(
-                -gamepad1.left_stick_y, // Drive Forward/Backward
-                gamepad1.left_stick_x,  // Strafe Left/Right
-                gamepad1.right_stick_x  // Turn Left/Right
+        // 0. SINGLE-CLICK HEADING RESET LOGIC (Gamepad 1 Options Button)
+        boolean currentOptionsButton = gamepad1.options;
+        if (currentOptionsButton && !lastOptionsButton) {
+            // Pull current X and Y coordinates to preserve coordinate positioning
+            double currentX = follower.pose().x();
+            double currentY = follower.pose().y();
+
+            // Re-apply pose with 0 degrees (0 radians) facing straight forward field-wise
+            Pose resetPose = new Pose(currentX, currentY, 0.0);
+            follower.setPose(resetPose);
+        }
+        lastOptionsButton = currentOptionsButton;
+
+        // 1. DRIVETRAIN (Pedro Pathing Field-Centric)
+        DrivePowers powers = ManualDrive.fieldCentric(
+                -gamepad1.left_stick_x,
+                gamepad1.left_stick_y,
+                -gamepad1.right_stick_x,
+                follower.pose().heading()
         );
-        follower.update();
+        follower.manual(powers);
 
         // 2. TOGGLE LOGIC FOR INTAKE MOTOR (Gamepad 1 Left Bumper)
         boolean currentButtonState = gamepad1.left_bumper;
@@ -90,8 +114,11 @@ public class ScrimmageTeleOpRobotCentric extends OpMode {
         }
         lastButtonState = currentButtonState;
 
-        // 3. INTAKE & ELEVATOR BEHAVIOR
-        if (motorIsSpinning) {
+        // 3. INTAKE & ELEVATOR BEHAVIOR WITH REVERSE INTERLOCK (Right Bumper Override)
+        if (gamepad1.right_bumper) {
+            intakeMotor.setPower(-RobotConfig.INTAKE_POWER);
+            elevatorMotor.setPower(-RobotConfig.ELEVATOR_POWER);
+        } else if (motorIsSpinning) {
             intakeMotor.setPower(RobotConfig.INTAKE_POWER);
             elevatorMotor.setPower(RobotConfig.ELEVATOR_POWER);
         } else {
@@ -119,48 +146,46 @@ public class ScrimmageTeleOpRobotCentric extends OpMode {
         }
         lastShooterTriggerState = currentShooterTriggerState;
 
-        // Uses configuration power options directly
+        // Cleaned practice: Using setVelocity(0.0) for active spin down
         if (shooterIsSpinning) {
-            pollenFlywheelMotor.setPower(RobotConfig.POLLEN_FLYWHEEL_POWER);
-            nectarFlywheelMotor.setPower(RobotConfig.NECTAR_FLYWHEEL_POWER);
+            pollenFlywheelMotor.setVelocity(RobotConfig.POLLEN_FLYWHEEL_VELOCITY);
+            nectarFlywheelMotor.setVelocity(RobotConfig.NECTAR_FLYWHEEL_VELOCITY);
         } else {
-            pollenFlywheelMotor.setPower(0.0);
-            nectarFlywheelMotor.setPower(0.0);
+            pollenFlywheelMotor.setVelocity(0.0);
+            nectarFlywheelMotor.setVelocity(0.0);
         }
 
-        // 6. TOGGLE LOGIC FOR POLLEN GATE (Button X)
-        boolean currentXState = gamepad1.x;
-        if (currentXState && !lastXButtonState) {
-            pollengateIsOpen = !pollengateIsOpen;
-        }
-        lastXButtonState = currentXState;
-
-        if (pollengateIsOpen) {
+        // 6. PRESS AND HOLD LOGIC FOR POLLEN GATE (Button X)
+        if (gamepad1.x) {
             pollenGateServo.setPosition(RobotConfig.POLLEN_GATE_SERVO_OPEN_POSITION);
         } else {
             pollenGateServo.setPosition(RobotConfig.POLLEN_GATE_SERVO_CLOSED_POSITION);
         }
 
-        // 7. TOGGLE LOGIC FOR NECTAR GATE (Button B)
-        boolean currentBState = gamepad1.b;
-        if (currentBState && !lastBButtonState) {
-            nectargateIsOpen = !nectargateIsOpen;
-        }
-        lastBButtonState = currentBState;
-
-        if (nectargateIsOpen) {
+        // 7. PRESS AND HOLD LOGIC FOR NECTAR GATE (Button B)
+        if (gamepad1.b) {
             nectarGateServo.setPosition(RobotConfig.NECTAR_GATE_SERVO_OPEN_POSITION);
         } else {
             nectarGateServo.setPosition(RobotConfig.NECTAR_GATE_SERVO_CLOSED_POSITION);
         }
 
         // 8. TELEMETRY MONITORING
+        telemetry.addData("X Position", "%.2f in", follower.pose().x());
+        telemetry.addData("Y Position", "%.2f in", follower.pose().y());
+        telemetry.addData("Heading", "%.2f deg", Math.toDegrees(follower.pose().heading()));
+        telemetry.addLine("---------------------------------");
         telemetry.addData("Flower Servo Position", flowerServo.getPosition());
-        telemetry.addData("Pollen Gate Open", pollengateIsOpen);
-        telemetry.addData("Nectar Gate Open", nectargateIsOpen);
-        telemetry.addData("Intake Spinning", motorIsSpinning);
+        telemetry.addData("Pollen Gate Holding Open", gamepad1.x);
+        telemetry.addData("Nectar Gate Holding Open", gamepad1.b);
+        telemetry.addData("Intake Forward Toggle Active", motorIsSpinning);
+        telemetry.addData("Intake Reversing (Held)", gamepad1.right_bumper);
         telemetry.addData("Shooter Spinning", shooterIsSpinning);
+        telemetry.addData("Pollen Shooter Actual Vel", pollenFlywheelMotor.getVelocity());
+        telemetry.addData("Nectar Shooter Actual Vel", nectarFlywheelMotor.getVelocity());
         telemetry.addData("Runtime", runtime.toString());
         telemetry.update();
+
+        // Optimized follower placement at the very bottom of the loop cycle
+        follower.update();
     }
 }
