@@ -90,9 +90,9 @@ public class QualifierTeleOpFieldCentric extends OpMode {
 
         // 2. FIELD-CENTRIC DRIVE MECHANICS
         DrivePowers powers = ManualDrive.fieldCentric(
-                -gamepad1.left_stick_y,
-                gamepad1.left_stick_x,
-                gamepad1.right_stick_x,
+                gamepad1.left_stick_y,
+                -gamepad1.left_stick_x,
+                -gamepad1.right_stick_x,
                 follower.pose().heading()
         );
         follower.manual(powers);
