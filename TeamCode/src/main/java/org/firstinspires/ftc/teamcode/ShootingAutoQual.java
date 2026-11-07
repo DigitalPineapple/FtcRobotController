@@ -1,3 +1,4 @@
+
 package org.firstinspires.ftc.teamcode;
 
 import com.pedropathing.api.PoseFactory;
@@ -6,6 +7,7 @@ import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.Scheduler;
 import com.pedropathing.math.Pose;
 import com.pedropathing.paths.Path;
+
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
@@ -16,35 +18,35 @@ import static com.pedropathing.ivy.pedro.PedroCommands.follow;
 
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
-@Autonomous(name="Robot: Example Auto", group="Robot")
-public class InstantAuto extends OpMode {
+@Autonomous(name = "Example Shooting Auto")
+public class ShootingAutoQual extends OpMode {
+
     private Follower follower;
+
     private final PoseFactory poseFactory = PoseFactory.degrees();
 
     // Poses
-    private final Pose startPose = poseFactory.of(0, 0, 0);
-    private final Pose scorePose = poseFactory.of(40, 0, 90);
-    private final Pose midPose = poseFactory.of(10,0,90);
-    private final Pose parkPose = poseFactory.of(0, 80, 90);
-
+    private final Pose startPose = poseFactory.of(48, 0, 270);
+    private final Pose midPose = poseFactory.of(10, 0, 270);
+    private final Pose finalPose = poseFactory.of(4, 84, 270);
 
     // Path methods
-    private Path startToScore() {
-        return line(startPose, scorePose).linear(startPose, scorePose);
+    private Path startToMid() {
+        return line(startPose, midPose).linear(startPose, midPose);
     }
 
-    private Path midPose(){
-        return line(scorePose, midPose).linear(scorePose,midPose);
+    private Path midToFinal() {
+        return line(midPose, finalPose).linear(midPose, finalPose);
     }
-    private Path park(){
-        return line(midPose, parkPose).linear(midPose,parkPose);
-    }
+
+    // Autonomous routine
     private Command autoRoutine() {
         return sequential(
-                follow(follower, startToScore()),
-                // Add mechanism commands here.
-                follow(follower, midPose()),
-                follow(follower, park())
+                follow(follower, startToMid()),
+
+                // Add shooting commands here.
+
+                follow(follower, midToFinal())
         );
     }
 
@@ -53,6 +55,7 @@ public class InstantAuto extends OpMode {
         Scheduler.reset();
 
         follower = Constants.create(hardwareMap);
+
         follower.setPose(startPose);
         follower.update();
     }
@@ -65,25 +68,26 @@ public class InstantAuto extends OpMode {
     @Override
     public void loop() {
         follower.update();
+
         Scheduler.execute();
 
         telemetry.addData("X", follower.pose().x());
         telemetry.addData("Y", follower.pose().y());
-        telemetry.addData("Heading", Math.toDegrees(follower.pose().heading()));
+        telemetry.addData(
+                "Heading",
+                Math.toDegrees(follower.pose().heading())
+        );
         telemetry.addData("Follower Mode", follower.mode());
+
         telemetry.update();
-
     }
 
-    public Pose getMidPose() {
-        return midPose;
-    }
-
-    @Override
     public void stop() {
-        // Automatically grabs and saves the final coordinates when the match ends
+
+    // Automatically grabs and saves the final coordinates when the match ends
         if (follower != null) {
             OpModeStorage.autonomousEndPose = follower.pose();
         }
     }
 }
+
