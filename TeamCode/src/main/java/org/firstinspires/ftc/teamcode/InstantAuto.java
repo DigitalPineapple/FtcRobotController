@@ -223,6 +223,13 @@ public class ExampleAuto extends OpMode {
 
     public Pose getMidPose() {
         return midPose;
-        master
+    }
+
+    @Override
+    public void stop() {
+        // Automatically grabs and saves the final coordinates when the match ends
+        if (follower != null) {
+            OpModeStorage.autonomousEndPose = follower.pose();
+        }
     }
 }

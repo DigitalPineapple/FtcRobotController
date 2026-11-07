@@ -6,62 +6,54 @@ import com.pedropathing.follower.ManualDrive;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
-
+import com.pedropathing.math.Pose;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
-@TeleOp(name = "Field Scrimmage TeleOp")
-public class ScrimmageTeleOpFieldCentric extends OpMode {
+@TeleOp(name = "Field Qualifier TeleOp")
+public class QualifierTeleOpFieldCentric extends OpMode {
 
+    // Subsystem hardware declarations
     private Follower follower;
     private ElapsedTime runtime = new ElapsedTime();
     private DcMotor intakeMotor;
     private Servo flowerServo;
     private DcMotor elevatorMotor;
-    private DcMotor pollenFlywheelMotor;
-    private DcMotor nectarFlywheelMotor;
+    private DcMotorEx pollenFlywheelMotor;
+    private DcMotorEx nectarFlywheelMotor;
     private Servo pollenGateServo;
     private Servo nectarGateServo;
 
-    // Toggle state variables for the intake motor (Left Bumper)
+    // Intake state tracking variables
     private boolean motorIsSpinning = false;
     private boolean lastButtonState = false;
 
-    // Toggle state variables for the flower servo (Left Trigger)
+    // Flower servo tracking state
     private double currentServoPosition = RobotConfig.FLOWER_SERVO_UP_POSITION;
     private boolean lastTriggerState = false;
 
-    // Toggle state variables for the shooter flywheels (Right Trigger)
-    private boolean shooterIsSpinning = false;
-    private boolean lastShooterTriggerState = false;
-
-    // Toggle state variables for Pollen Gate (Button X)
-    private boolean pollengateIsOpen = false;
-    private boolean lastXButtonState = false;
-
-    // Toggle state variables for Nectar Gate (Button B)
-    private boolean nectargateIsOpen = false;
-    private boolean lastBButtonState = false;
-
     @Override
     public void init() {
+        // Initialize Pedro Pathing follower and localization
         follower = Constants.create(hardwareMap);
 
-        // Hardware Retrievals
+        // Map configuration names to hardware ports
         intakeMotor = hardwareMap.get(DcMotor.class, "intakeMotor");
         flowerServo = hardwareMap.get(Servo.class, "flowerServo");
         elevatorMotor = hardwareMap.get(DcMotor.class, "elevatorMotor");
 
-        nectarFlywheelMotor = hardwareMap.get(DcMotor.class, "nectarFlywheelMotor");
-        pollenFlywheelMotor = hardwareMap.get(DcMotor.class, "pollenFlywheelMotor");
+        nectarFlywheelMotor = hardwareMap.get(DcMotorEx.class, "nectarFlywheelMotor");
+        pollenFlywheelMotor = hardwareMap.get(DcMotorEx.class, "pollenFlywheelMotor");
 
         pollenGateServo = hardwareMap.get(Servo.class, "pollenGateServo");
         nectarGateServo = hardwareMap.get(Servo.class, "nectarGateServo");
 
+        // Reverse servo orientation for mechanical compatibility
         flowerServo.setDirection(Servo.Direction.REVERSE);
 
-        // Intialize gates to closed positions immediately
+        // Set resting servo positions on startup
         pollenGateServo.setPosition(RobotConfig.POLLEN_GATE_SERVO_CLOSED_POSITION);
         nectarGateServo.setPosition(RobotConfig.NECTAR_GATE_SERVO_CLOSED_POSITION);
         flowerServo.setPosition(RobotConfig.FLOWER_SERVO_UP_POSITION);
@@ -77,25 +69,28 @@ public class ScrimmageTeleOpFieldCentric extends OpMode {
 
     @Override
     public void loop() {
-        // 1. DRIVETRAIN (Pedro Pathing Robot-Centric)
+        // 1. FIELD-CENTRIC DRIVE MECHANICS
         DrivePowers powers = ManualDrive.fieldCentric(
-                -gamepad1.left_stick_x,
-                gamepad1.left_stick_y,
+                -gamepad1.left_stick_y,
+                gamepad1.left_stick_x,
                 gamepad1.right_stick_x,
                 follower.pose().heading()
         );
         follower.manual(powers);
         follower.update();
 
-        // 2. TOGGLE LOGIC FOR INTAKE MOTOR (Gamepad 1 Left Bumper)
+        // 2. INTAKE MOTOR TOGGLE (Left Bumper rising-edge)
         boolean currentButtonState = gamepad1.left_bumper;
         if (currentButtonState && !lastButtonState) {
             motorIsSpinning = !motorIsSpinning;
         }
         lastButtonState = currentButtonState;
 
-        // 3. INTAKE & ELEVATOR BEHAVIOR
-        if (motorIsSpinning) {
+        // 3. INTAKE & ELEVATOR RUN LOGIC (Right Bumper Override)
+        if (gamepad1.right_bumper) {
+            intakeMotor.setPower(-RobotConfig.INTAKE_POWER);
+            elevatorMotor.setPower(-RobotConfig.ELEVATOR_POWER);
+        } else if (motorIsSpinning) {
             intakeMotor.setPower(RobotConfig.INTAKE_POWER);
             elevatorMotor.setPower(RobotConfig.ELEVATOR_POWER);
         } else {
@@ -103,7 +98,7 @@ public class ScrimmageTeleOpFieldCentric extends OpMode {
             elevatorMotor.setPower(0.0);
         }
 
-        // 4. SEQUENTIAL TOGGLE LOGIC FOR FLOWER SERVO (Left Trigger)
+        // 4. FLOWER SERVO TOGGLE (Left Trigger sequential snap)
         boolean currentTriggerState = gamepad1.left_trigger > 0.5;
         if (currentTriggerState && !lastTriggerState) {
             if (currentServoPosition == RobotConfig.FLOWER_SERVO_DOWN_POSITION) {
@@ -113,57 +108,50 @@ public class ScrimmageTeleOpFieldCentric extends OpMode {
             }
         }
         lastTriggerState = currentTriggerState;
-
         flowerServo.setPosition(currentServoPosition);
 
-        // 5. TOGGLE LOGIC FOR SHOOTER POWERS (Gamepad 1 Right Trigger)
-        boolean currentShooterTriggerState = gamepad1.right_trigger > 0.5;
-        if (currentShooterTriggerState && !lastShooterTriggerState) {
-            shooterIsSpinning = !shooterIsSpinning;
-        }
-        lastShooterTriggerState = currentShooterTriggerState;
-
-        // Uses configuration power options directly
-        if (shooterIsSpinning) {
-            pollenFlywheelMotor.setPower(RobotConfig.POLLEN_FLYWHEEL_POWER);
-            nectarFlywheelMotor.setPower(RobotConfig.NECTAR_FLYWHEEL_POWER);
+        // 5. SHOOTER AUTOMATIC PRE-SPOOL CONTROL
+        boolean driverWantsToScore = gamepad1.x || gamepad1.b;
+        if (driverWantsToScore) {
+            pollenFlywheelMotor.setVelocity(RobotConfig.POLLEN_FLYWHEEL_VELOCITY);
+            nectarFlywheelMotor.setVelocity(RobotConfig.NECTAR_FLYWHEEL_VELOCITY);
         } else {
-            pollenFlywheelMotor.setPower(0.0);
-            nectarFlywheelMotor.setPower(0.0);
+            pollenFlywheelMotor.setVelocity(RobotConfig.POLLEN_FLYWHEEL_VELOCITY * 0.25);
+            nectarFlywheelMotor.setVelocity(RobotConfig.NECTAR_FLYWHEEL_VELOCITY * 0.25);
         }
 
-        // 6. TOGGLE LOGIC FOR POLLEN GATE (Button X)
-        boolean currentXState = gamepad1.x;
-        if (currentXState && !lastXButtonState) {
-            pollengateIsOpen = !pollengateIsOpen;
-        }
-        lastXButtonState = currentXState;
+        // Isolate positive speed values for strict target comparison checks
+        double currentPollenSpeed = Math.abs(pollenFlywheelMotor.getVelocity());
+        double currentNectarSpeed = Math.abs(nectarFlywheelMotor.getVelocity());
+        double pollenFullTarget = Math.abs(RobotConfig.POLLEN_FLYWHEEL_VELOCITY);
+        double nectarFullTarget = Math.abs(RobotConfig.NECTAR_FLYWHEEL_VELOCITY);
 
-        if (pollengateIsOpen) {
+        // 6. STRICT POWER THRESHOLD CALCULATION (Removed dip tolerance checks)
+        double pollenRequiredThreshold = pollenFullTarget * RobotConfig.SHOOTER_FULL_POWER_THRESHOLD;
+        boolean pollenReady = currentPollenSpeed >= pollenRequiredThreshold;
+
+        double nectarRequiredThreshold = nectarFullTarget * RobotConfig.SHOOTER_FULL_POWER_THRESHOLD;
+        boolean nectarReady = currentNectarSpeed >= nectarRequiredThreshold;
+
+        // 7. POLLEN GATE CONTROL (Button X - Strictly locked to target velocity threshold)
+        if (gamepad1.x && pollenReady) {
             pollenGateServo.setPosition(RobotConfig.POLLEN_GATE_SERVO_OPEN_POSITION);
         } else {
             pollenGateServo.setPosition(RobotConfig.POLLEN_GATE_SERVO_CLOSED_POSITION);
         }
 
-        // 7. TOGGLE LOGIC FOR NECTAR GATE (Button B)
-        boolean currentBState = gamepad1.b;
-        if (currentBState && !lastBButtonState) {
-            nectargateIsOpen = !nectargateIsOpen;
-        }
-        lastBButtonState = currentBState;
-
-        if (nectargateIsOpen) {
+        // 8. NECTAR GATE CONTROL (Button B - Strictly locked to target velocity threshold)
+        if (gamepad1.b && nectarReady) {
             nectarGateServo.setPosition(RobotConfig.NECTAR_GATE_SERVO_OPEN_POSITION);
         } else {
             nectarGateServo.setPosition(RobotConfig.NECTAR_GATE_SERVO_CLOSED_POSITION);
         }
 
-        // 8. TELEMETRY MONITORING
-        telemetry.addData("Flower Servo Position", flowerServo.getPosition());
-        telemetry.addData("Pollen Gate Open", pollengateIsOpen);
-        telemetry.addData("Nectar Gate Open", nectargateIsOpen);
-        telemetry.addData("Intake Spinning", motorIsSpinning);
-        telemetry.addData("Shooter Spinning", shooterIsSpinning);
+        // 9. DIAGNOSTIC DATA MONITORING
+        telemetry.addData("Pollen Clear", gamepad1.x && pollenReady);
+        telemetry.addData("Nectar Clear", gamepad1.b && nectarReady);
+        telemetry.addData("Pollen Vel", currentPollenSpeed + " / " + pollenRequiredThreshold);
+        telemetry.addData("Nectar Vel", currentNectarSpeed + " / " + nectarRequiredThreshold);
         telemetry.addData("Runtime", runtime.toString());
         telemetry.update();
     }
