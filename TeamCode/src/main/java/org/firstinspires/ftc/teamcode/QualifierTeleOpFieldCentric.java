@@ -34,6 +34,9 @@ public class QualifierTeleOpFieldCentric extends OpMode {
     private double currentServoPosition = RobotConfig.FLOWER_SERVO_UP_POSITION;
     private boolean lastTriggerState = false;
 
+    // Heading reset tracking state variable
+    private boolean lastOptionsButton = false;
+
     @Override
     public void init() {
         // Initialize Pedro Pathing follower and localization
@@ -58,18 +61,34 @@ public class QualifierTeleOpFieldCentric extends OpMode {
         nectarGateServo.setPosition(RobotConfig.NECTAR_GATE_SERVO_CLOSED_POSITION);
         flowerServo.setPosition(RobotConfig.FLOWER_SERVO_UP_POSITION);
 
+        // Display initialization telemetry and verify stored coordinate states from auto
         telemetry.addData("Status", "Initialized");
         telemetry.update();
     }
 
     @Override
     public void start() {
+        // Apply the static transfer pose directly to the follower tracking map
+        follower.setPose(OpModeStorage.autonomousEndPose);
+        follower.update();
         runtime.reset();
     }
 
     @Override
     public void loop() {
-        // 1. FIELD-CENTRIC DRIVE MECHANICS
+        // 1. FIELD ORIENTATION RESET (Preserves X and Y positioning)
+        boolean currentOptionsButton = gamepad1.options;
+        if (currentOptionsButton && !lastOptionsButton) {
+            double currentX = follower.pose().x();
+            double currentY = follower.pose().y();
+
+            // Re-apply pose with 0 degrees straight forward field-wise
+            Pose resetPose = new Pose(currentX, currentY, 0.0);
+            follower.setPose(resetPose);
+        }
+        lastOptionsButton = currentOptionsButton;
+
+        // 2. FIELD-CENTRIC DRIVE MECHANICS
         DrivePowers powers = ManualDrive.fieldCentric(
                 -gamepad1.left_stick_y,
                 gamepad1.left_stick_x,
@@ -79,14 +98,14 @@ public class QualifierTeleOpFieldCentric extends OpMode {
         follower.manual(powers);
         follower.update();
 
-        // 2. INTAKE MOTOR TOGGLE (Left Bumper rising-edge)
+        // 3. INTAKE MOTOR TOGGLE (Left Bumper rising-edge)
         boolean currentButtonState = gamepad1.left_bumper;
         if (currentButtonState && !lastButtonState) {
             motorIsSpinning = !motorIsSpinning;
         }
         lastButtonState = currentButtonState;
 
-        // 3. INTAKE & ELEVATOR RUN LOGIC (Right Bumper Override)
+        // 4. INTAKE & ELEVATOR RUN LOGIC (Right Bumper Override)
         if (gamepad1.right_bumper) {
             intakeMotor.setPower(-RobotConfig.INTAKE_POWER);
             elevatorMotor.setPower(-RobotConfig.ELEVATOR_POWER);
@@ -98,7 +117,7 @@ public class QualifierTeleOpFieldCentric extends OpMode {
             elevatorMotor.setPower(0.0);
         }
 
-        // 4. FLOWER SERVO TOGGLE (Left Trigger sequential snap)
+        // 5. FLOWER SERVO TOGGLE (Left Trigger sequential snap)
         boolean currentTriggerState = gamepad1.left_trigger > 0.5;
         if (currentTriggerState && !lastTriggerState) {
             if (currentServoPosition == RobotConfig.FLOWER_SERVO_DOWN_POSITION) {
@@ -110,7 +129,7 @@ public class QualifierTeleOpFieldCentric extends OpMode {
         lastTriggerState = currentTriggerState;
         flowerServo.setPosition(currentServoPosition);
 
-        // 5. SHOOTER AUTOMATIC PRE-SPOOL CONTROL
+        // 6. SHOOTER AUTOMATIC PRE-SPOOL CONTROL
         boolean driverWantsToScore = gamepad1.x || gamepad1.b;
         if (driverWantsToScore) {
             pollenFlywheelMotor.setVelocity(RobotConfig.POLLEN_FLYWHEEL_VELOCITY);
@@ -126,28 +145,29 @@ public class QualifierTeleOpFieldCentric extends OpMode {
         double pollenFullTarget = Math.abs(RobotConfig.POLLEN_FLYWHEEL_VELOCITY);
         double nectarFullTarget = Math.abs(RobotConfig.NECTAR_FLYWHEEL_VELOCITY);
 
-        // 6. STRICT POWER THRESHOLD CALCULATION (Removed dip tolerance checks)
+        // 7. STRICT POWER THRESHOLD CALCULATION
         double pollenRequiredThreshold = pollenFullTarget * RobotConfig.SHOOTER_FULL_POWER_THRESHOLD;
         boolean pollenReady = currentPollenSpeed >= pollenRequiredThreshold;
 
         double nectarRequiredThreshold = nectarFullTarget * RobotConfig.SHOOTER_FULL_POWER_THRESHOLD;
         boolean nectarReady = currentNectarSpeed >= nectarRequiredThreshold;
 
-        // 7. POLLEN GATE CONTROL (Button X - Strictly locked to target velocity threshold)
+        // 8. POLLEN GATE CONTROL (Button X - Strictly locked to target velocity threshold)
         if (gamepad1.x && pollenReady) {
             pollenGateServo.setPosition(RobotConfig.POLLEN_GATE_SERVO_OPEN_POSITION);
         } else {
             pollenGateServo.setPosition(RobotConfig.POLLEN_GATE_SERVO_CLOSED_POSITION);
         }
 
-        // 8. NECTAR GATE CONTROL (Button B - Strictly locked to target velocity threshold)
+        // 9. NECTAR GATE CONTROL (Button B - Strictly locked to target velocity threshold)
         if (gamepad1.b && nectarReady) {
             nectarGateServo.setPosition(RobotConfig.NECTAR_GATE_SERVO_OPEN_POSITION);
         } else {
             nectarGateServo.setPosition(RobotConfig.NECTAR_GATE_SERVO_CLOSED_POSITION);
         }
 
-        // 9. DIAGNOSTIC DATA MONITORING
+        // 10. DIAGNOSTIC DATA MONITORING
+        telemetry.addData("Heading", Math.toDegrees(follower.pose().heading()));
         telemetry.addData("Pollen Clear", gamepad1.x && pollenReady);
         telemetry.addData("Nectar Clear", gamepad1.b && nectarReady);
         telemetry.addData("Pollen Vel", currentPollenSpeed + " / " + pollenRequiredThreshold);
