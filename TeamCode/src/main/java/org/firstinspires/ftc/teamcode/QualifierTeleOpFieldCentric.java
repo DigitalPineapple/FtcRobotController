@@ -63,11 +63,6 @@ public class QualifierTeleOpFieldCentric extends OpMode {
 
         // Display initialization telemetry and verify stored coordinate states from auto
         telemetry.addData("Status", "Initialized");
-        telemetry.addData("Stored Auto End Pose", "X: %.2f, Y: %.2f, Heading: %.2f deg",
-                OpModeStorage.autonomousEndPose.x(),
-                OpModeStorage.autonomousEndPose.y(),
-                Math.toDegrees(OpModeStorage.autonomousEndPose.heading())
-        );
         telemetry.update();
     }
 
@@ -77,10 +72,6 @@ public class QualifierTeleOpFieldCentric extends OpMode {
         follower.setPose(OpModeStorage.autonomousEndPose);
         follower.update();
         runtime.reset();
-
-        telemetry.clearAll();
-        telemetry.addLine("TeleOp Started with Autonomous Final Pose!");
-        telemetry.update();
     }
 
     @Override
