@@ -17,4 +17,5 @@ public class RobotConfig {
     public static double POLLEN_GATE_SERVO_OPEN_POSITION = 1.0;
     public static double NECTAR_GATE_SERVO_CLOSED_POSITION = 0.52;
     public static double NECTAR_GATE_SERVO_OPEN_POSITION = 0.33;
+    public static double SHOOTER_FULL_POWER_THRESHOLD = 0.95;
 }
