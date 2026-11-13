@@ -27,12 +27,14 @@ public class ParkAutoQual extends OpMode {
 
     // Poses
     private final Pose startPose = poseFactory.of(8, 144, 270);
-    private final Pose finalPose = poseFactory.of(8, 120, 270);
+    private final Pose finalPose = poseFactory.of(8, 130, 270);
 
     // Path methods
     private Path startToFinal() {
-        return line(startPose, finalPose).linear(startPose, finalPose);
+        return line(startPose, finalPose).linear(startPose, finalPose)
+                .with(Constants.foresightConfig.maxVelocityConstraint.at(10.0));
     }
+
 
     // Autonomous routine
     private Command autoRoutine() {

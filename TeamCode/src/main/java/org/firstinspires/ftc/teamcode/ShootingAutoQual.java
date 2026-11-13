@@ -27,7 +27,7 @@ public class ShootingAutoQual extends OpMode {
 
     // Poses
     private final Pose startPose = poseFactory.of(48, 0, 270);
-    private final Pose midPose = poseFactory.of(10, 0, 270);
+    private final Pose midPose = poseFactory.of(10, 36, 270);
     private final Pose finalPose = poseFactory.of(4, 84, 270);
 
     // Path methods
