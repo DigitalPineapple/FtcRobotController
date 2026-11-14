@@ -41,9 +41,14 @@ public class QualifierTeleOpFieldCentric extends OpMode {
     private double pollenManualVelocity = RobotConfig.POLLEN_FLYWHEEL_VELOCITY;
     private double nectarManualVelocity = RobotConfig.NECTAR_FLYWHEEL_VELOCITY;
 
+    // Single-click rising-edge trackers for Gamepad 2
+    private boolean lastGp2LeftTrigger = false;
+    private boolean lastGp2LeftBumper = false;
+    private boolean lastGp2RightTrigger = false;
+    private boolean lastGp2RightBumper = false;
+
     @Override
     public void init() {
-        // Initialize Pedro Pathing follower and localization
         follower = Constants.create(hardwareMap);
 
         intakeMotor = hardwareMap.get(DcMotor.class, "intakeMotor");
@@ -136,19 +141,40 @@ public class QualifierTeleOpFieldCentric extends OpMode {
         lastTriggerState = currentTriggerState;
         flowerServo.setPosition(currentServoPosition);
 
-        // 6. GAMEPAD 2 MANUALLY ADJUST VELOCITY CHANNELS
-        if (gamepad2.left_trigger > 0.5) {
-            pollenManualVelocity += 10.0;
-        } else if (gamepad2.left_bumper) {
-            pollenManualVelocity -= 10.0;
+        // 6. GAMEPAD 2 SINGLE-CLICK VELOCITY ADJUSTMENTS (1500 Min / 2500 Max Bounds)
+        boolean currentGp2LeftTrigger = gamepad2.left_trigger > 0.5;
+        boolean currentGp2LeftBumper = gamepad2.left_bumper;
+        boolean currentGp2RightTrigger = gamepad2.right_trigger > 0.5;
+        boolean currentGp2RightBumper = gamepad2.right_bumper;
+
+        // Pollen (Positive velocity: +1930)
+        if (currentGp2LeftTrigger && !lastGp2LeftTrigger) {
+            if (Math.abs(pollenManualVelocity) > 1500) {
+                pollenManualVelocity -= 10.0;
+            }
+        }
+        if (currentGp2LeftBumper && !lastGp2LeftBumper) {
+            if (Math.abs(pollenManualVelocity) < 2500) {
+                pollenManualVelocity += 10.0;
+            }
         }
 
-        if (gamepad2.right_trigger > 0.5) {
-            // Respects your configuration direction mapping (+10 moves away from 0 toward -2100)
-            nectarManualVelocity -= 10.0;
-        } else if (gamepad2.right_bumper) {
-            nectarManualVelocity += 10.0;
+        // Nectar (Negative velocity: -2100)
+        if (currentGp2RightTrigger && !lastGp2RightTrigger) {
+            if (Math.abs(nectarManualVelocity) > 1500) {
+                nectarManualVelocity += 10.0; // Moves closer to 0 (slower)
+            }
         }
+        if (currentGp2RightBumper && !lastGp2RightBumper) {
+            if (Math.abs(nectarManualVelocity) < 2500) {
+                nectarManualVelocity -= 10.0; // Moves further negative (faster)
+            }
+        }
+
+        lastGp2LeftTrigger = currentGp2LeftTrigger;
+        lastGp2LeftBumper = currentGp2LeftBumper;
+        lastGp2RightTrigger = currentGp2RightTrigger;
+        lastGp2RightBumper = currentGp2RightBumper;
 
         // 7. SHOOTER AUTOMATIC PRE-SPOOL CONTROL
         boolean driverWantsToScore = gamepad1.x || gamepad1.b;
