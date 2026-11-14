@@ -26,6 +26,7 @@ public class PollenShootingAutoQual extends OpMode {
     private Follower follower;
     private DcMotorEx pollenFlywheelMotor;
     private Servo pollenGateServo;
+    private Servo nectarGateServo;
     private final ElapsedTime shootingTimer = new ElapsedTime();
     private static final double SHOOTING_DURATION_SECONDS = 7.0;
     private static final double SHAKE_START_SECONDS = 3.0;
@@ -66,6 +67,7 @@ public class PollenShootingAutoQual extends OpMode {
 
         pollenFlywheelMotor = hardwareMap.get(DcMotorEx.class, "pollenFlywheelMotor");
         pollenGateServo = hardwareMap.get(Servo.class, "pollenGateServo");
+        nectarGateServo = hardwareMap.get(Servo.class, "nectarGateServo");
         stopShooter();
         shootingState = ShootingState.IDLE;
 
@@ -77,6 +79,7 @@ public class PollenShootingAutoQual extends OpMode {
 
     @Override
     public void start() {
+        nectarGateServo.setPosition(RobotConfig.NECTAR_GATE_SERVO_CLOSED_POSITION);
         pollenFlywheelMotor.setVelocity(RobotConfig.POLLEN_FLYWHEEL_VELOCITY);
         shootingState = ShootingState.SPINNING_UP;
     }
