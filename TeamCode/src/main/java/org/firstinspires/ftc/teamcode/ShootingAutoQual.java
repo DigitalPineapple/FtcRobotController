@@ -1,6 +1,9 @@
 
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+
+
 import com.pedropathing.api.PoseFactory;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.ivy.Command;
@@ -18,6 +21,7 @@ import static com.pedropathing.ivy.pedro.PedroCommands.follow;
 
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
+@Disabled
 @Autonomous(name = "Example Shooting Auto")
 public class ShootingAutoQual extends OpMode {
 
