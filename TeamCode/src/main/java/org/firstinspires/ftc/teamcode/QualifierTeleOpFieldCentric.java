@@ -37,12 +37,20 @@ public class QualifierTeleOpFieldCentric extends OpMode {
     // Heading reset tracking state variable
     private boolean lastOptionsButton = false;
 
+    // Manual targets initialized with your exact RobotConfig velocity constants
+    private double pollenManualVelocity = RobotConfig.POLLEN_FLYWHEEL_VELOCITY;
+    private double nectarManualVelocity = RobotConfig.NECTAR_FLYWHEEL_VELOCITY;
+
+    // Single-click rising-edge trackers for Gamepad 2
+    private boolean lastGp2LeftTrigger = false;
+    private boolean lastGp2LeftBumper = false;
+    private boolean lastGp2RightTrigger = false;
+    private boolean lastGp2RightBumper = false;
+
     @Override
     public void init() {
-        // Initialize Pedro Pathing follower and localization
         follower = Constants.create(hardwareMap);
 
-        // Map configuration names to hardware ports
         intakeMotor = hardwareMap.get(DcMotor.class, "intakeMotor");
         flowerServo = hardwareMap.get(Servo.class, "flowerServo");
         elevatorMotor = hardwareMap.get(DcMotor.class, "elevatorMotor");
@@ -53,22 +61,30 @@ public class QualifierTeleOpFieldCentric extends OpMode {
         pollenGateServo = hardwareMap.get(Servo.class, "pollenGateServo");
         nectarGateServo = hardwareMap.get(Servo.class, "nectarGateServo");
 
-        // Reverse servo orientation for mechanical compatibility
+        // Configure flywheels for closed-loop velocity encoder modes
+        nectarFlywheelMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        nectarFlywheelMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        pollenFlywheelMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        pollenFlywheelMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
         flowerServo.setDirection(Servo.Direction.REVERSE);
 
-        // Set resting servo positions on startup
+        // Snap servos to your configuration resting points on initialization
         pollenGateServo.setPosition(RobotConfig.POLLEN_GATE_SERVO_CLOSED_POSITION);
         nectarGateServo.setPosition(RobotConfig.NECTAR_GATE_SERVO_CLOSED_POSITION);
         flowerServo.setPosition(RobotConfig.FLOWER_SERVO_UP_POSITION);
 
-        // Display initialization telemetry and verify stored coordinate states from auto
-        telemetry.addData("Status", "Initialized");
+        // Reset runtime dynamic values to match configuration on init
+        pollenManualVelocity = RobotConfig.POLLEN_FLYWHEEL_VELOCITY;
+        nectarManualVelocity = RobotConfig.NECTAR_FLYWHEEL_VELOCITY;
+
+        telemetry.addData("Status", "Initialized Cleanly!");
         telemetry.update();
     }
 
     @Override
     public void start() {
-        // Apply the static transfer pose directly to the follower tracking map
         follower.setPose(OpModeStorage.autonomousEndPose);
         follower.update();
         runtime.reset();
@@ -76,14 +92,10 @@ public class QualifierTeleOpFieldCentric extends OpMode {
 
     @Override
     public void loop() {
-        // 1. FIELD ORIENTATION RESET (Preserves X and Y positioning)
+        // 1. FIELD ORIENTATION RESET (Gamepad 1 Options)
         boolean currentOptionsButton = gamepad1.options;
         if (currentOptionsButton && !lastOptionsButton) {
-            double currentX = follower.pose().x();
-            double currentY = follower.pose().y();
-
-            // Re-apply pose with 0 degrees straight forward field-wise
-            Pose resetPose = new Pose(currentX, currentY, 0.0);
+            Pose resetPose = new Pose(follower.pose().x(), follower.pose().y(), 0.0);
             follower.setPose(resetPose);
         }
         lastOptionsButton = currentOptionsButton;
@@ -129,37 +141,72 @@ public class QualifierTeleOpFieldCentric extends OpMode {
         lastTriggerState = currentTriggerState;
         flowerServo.setPosition(currentServoPosition);
 
-        // 6. SHOOTER AUTOMATIC PRE-SPOOL CONTROL
-        boolean driverWantsToScore = gamepad1.x || gamepad1.b;
-        if (driverWantsToScore) {
-            pollenFlywheelMotor.setVelocity(RobotConfig.POLLEN_FLYWHEEL_VELOCITY);
-            nectarFlywheelMotor.setVelocity(RobotConfig.NECTAR_FLYWHEEL_VELOCITY);
-        } else {
-            pollenFlywheelMotor.setVelocity(RobotConfig.POLLEN_FLYWHEEL_VELOCITY * 0.75);
-            nectarFlywheelMotor.setVelocity(RobotConfig.NECTAR_FLYWHEEL_VELOCITY * 0.75);
+        // 6. GAMEPAD 2 SINGLE-CLICK VELOCITY ADJUSTMENTS (1500 Min / 2500 Max Bounds)
+        boolean currentGp2LeftTrigger = gamepad2.left_trigger > 0.5;
+        boolean currentGp2LeftBumper = gamepad2.left_bumper;
+        boolean currentGp2RightTrigger = gamepad2.right_trigger > 0.5;
+        boolean currentGp2RightBumper = gamepad2.right_bumper;
+
+        // Pollen (Positive velocity: +1930)
+        if (currentGp2LeftTrigger && !lastGp2LeftTrigger) {
+            if (Math.abs(pollenManualVelocity) > 1500) {
+                pollenManualVelocity -= 10.0;
+            }
+        }
+        if (currentGp2LeftBumper && !lastGp2LeftBumper) {
+            if (Math.abs(pollenManualVelocity) < 2500) {
+                pollenManualVelocity += 10.0;
+            }
         }
 
-        // Isolate positive speed values for strict target comparison checks
+        // Nectar (Negative velocity: -2100)
+        if (currentGp2RightTrigger && !lastGp2RightTrigger) {
+            if (Math.abs(nectarManualVelocity) > 1500) {
+                nectarManualVelocity += 10.0; // Moves closer to 0 (slower)
+            }
+        }
+        if (currentGp2RightBumper && !lastGp2RightBumper) {
+            if (Math.abs(nectarManualVelocity) < 2500) {
+                nectarManualVelocity -= 10.0; // Moves further negative (faster)
+            }
+        }
+
+        lastGp2LeftTrigger = currentGp2LeftTrigger;
+        lastGp2LeftBumper = currentGp2LeftBumper;
+        lastGp2RightTrigger = currentGp2RightTrigger;
+        lastGp2RightBumper = currentGp2RightBumper;
+
+        // 7. SHOOTER AUTOMATIC PRE-SPOOL CONTROL
+        boolean driverWantsToScore = gamepad1.x || gamepad1.b;
+        if (driverWantsToScore) {
+            pollenFlywheelMotor.setVelocity(pollenManualVelocity);
+            nectarFlywheelMotor.setVelocity(nectarManualVelocity);
+        } else {
+            pollenFlywheelMotor.setVelocity(pollenManualVelocity * 0.75);
+            nectarFlywheelMotor.setVelocity(nectarManualVelocity * 0.75);
+        }
+
+        // Isolate absolute speed values for comparison checks
         double currentPollenSpeed = Math.abs(pollenFlywheelMotor.getVelocity());
         double currentNectarSpeed = Math.abs(nectarFlywheelMotor.getVelocity());
-        double pollenFullTarget = Math.abs(RobotConfig.POLLEN_FLYWHEEL_VELOCITY);
-        double nectarFullTarget = Math.abs(RobotConfig.NECTAR_FLYWHEEL_VELOCITY);
+        double pollenFullTarget = Math.abs(pollenManualVelocity);
+        double nectarFullTarget = Math.abs(nectarManualVelocity);
 
-        // 7. STRICT POWER THRESHOLD CALCULATION
+        // Threshold targets update dynamically as Gamepad 2 modifies targets
         double pollenRequiredThreshold = pollenFullTarget * RobotConfig.SHOOTER_FULL_POWER_THRESHOLD;
         boolean pollenReady = currentPollenSpeed >= pollenRequiredThreshold;
 
         double nectarRequiredThreshold = nectarFullTarget * RobotConfig.SHOOTER_FULL_POWER_THRESHOLD;
         boolean nectarReady = currentNectarSpeed >= nectarRequiredThreshold;
 
-        // 8. POLLEN GATE CONTROL (Button X - Strictly locked to target velocity threshold)
+        // 8. POLLEN GATE CONTROL (Button X)
         if (gamepad1.x && pollenReady) {
             pollenGateServo.setPosition(RobotConfig.POLLEN_GATE_SERVO_OPEN_POSITION);
         } else {
             pollenGateServo.setPosition(RobotConfig.POLLEN_GATE_SERVO_CLOSED_POSITION);
         }
 
-        // 9. NECTAR GATE CONTROL (Button B - Strictly locked to target velocity threshold)
+        // 9. NECTAR GATE CONTROL (Button B)
         if (gamepad1.b && nectarReady) {
             nectarGateServo.setPosition(RobotConfig.NECTAR_GATE_SERVO_OPEN_POSITION);
         } else {
@@ -168,8 +215,8 @@ public class QualifierTeleOpFieldCentric extends OpMode {
 
         // 10. DIAGNOSTIC DATA MONITORING
         telemetry.addData("Heading", Math.toDegrees(follower.pose().heading()));
-        telemetry.addData("Pollen Clear", gamepad1.x && pollenReady);
-        telemetry.addData("Nectar Clear", gamepad1.b && nectarReady);
+        telemetry.addData("Pollen Target", pollenManualVelocity);
+        telemetry.addData("Nectar Target", nectarManualVelocity);
         telemetry.addData("Pollen Vel", currentPollenSpeed + " / " + pollenRequiredThreshold);
         telemetry.addData("Nectar Vel", currentNectarSpeed + " / " + nectarRequiredThreshold);
         telemetry.addData("Runtime", runtime.toString());
