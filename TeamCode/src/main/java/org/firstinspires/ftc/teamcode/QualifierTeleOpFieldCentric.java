@@ -11,6 +11,9 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.pedropathing.math.Pose;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
+
 
 @TeleOp(name = "Field Qualifier TeleOp")
 public class QualifierTeleOpFieldCentric extends OpMode {
@@ -50,7 +53,7 @@ public class QualifierTeleOpFieldCentric extends OpMode {
     @Override
     public void init() {
         follower = Constants.create(hardwareMap);
-
+        telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
         intakeMotor = hardwareMap.get(DcMotor.class, "intakeMotor");
         flowerServo = hardwareMap.get(Servo.class, "flowerServo");
         elevatorMotor = hardwareMap.get(DcMotor.class, "elevatorMotor");
@@ -213,13 +216,21 @@ public class QualifierTeleOpFieldCentric extends OpMode {
             nectarGateServo.setPosition(RobotConfig.NECTAR_GATE_SERVO_CLOSED_POSITION);
         }
 
-        // 10. DIAGNOSTIC DATA MONITORING
-        telemetry.addData("Heading", Math.toDegrees(follower.pose().heading()));
-        telemetry.addData("Pollen Target", pollenManualVelocity);
-        telemetry.addData("Nectar Target", nectarManualVelocity);
-        telemetry.addData("Pollen Vel", currentPollenSpeed + " / " + pollenRequiredThreshold);
-        telemetry.addData("Nectar Vel", currentNectarSpeed + " / " + nectarRequiredThreshold);
+        telemetry.addData("Heading (deg)", Math.toDegrees(follower.pose().heading()));
+
+
+        telemetry.addData("Pollen Target", Math.abs(pollenManualVelocity));
+        telemetry.addData("Pollen Threshold", pollenRequiredThreshold);
+        telemetry.addData("Pollen Actual Vel", currentPollenSpeed);
+
+
+        telemetry.addData("Nectar Target", Math.abs(nectarManualVelocity));
+        telemetry.addData("Nectar Threshold", nectarRequiredThreshold);
+        telemetry.addData("Nectar Actual Vel", currentNectarSpeed);
+
+
         telemetry.addData("Runtime", runtime.toString());
         telemetry.update();
+
     }
 }
