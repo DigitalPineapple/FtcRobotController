@@ -217,13 +217,9 @@ public class QualifierTeleOpFieldCentric extends OpMode {
         }
 
         telemetry.addData("Heading (deg)", Math.toDegrees(follower.pose().heading()));
-
-
         telemetry.addData("Pollen Target", Math.abs(pollenManualVelocity));
         telemetry.addData("Pollen Threshold", pollenRequiredThreshold);
         telemetry.addData("Pollen Actual Vel", currentPollenSpeed);
-
-
         telemetry.addData("Nectar Target", Math.abs(nectarManualVelocity));
         telemetry.addData("Nectar Threshold", nectarRequiredThreshold);
         telemetry.addData("Nectar Actual Vel", currentNectarSpeed);
