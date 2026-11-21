@@ -30,10 +30,9 @@ public class TestingAxonServo extends LinearOpMode {
 
         while (opModeIsActive()) {
             if (gamepad1.dpad_up) {
-                currentServoPosition += 0.002;
+               axonServo.setPosition(1.0);
             } else if (gamepad1.dpad_down) {
-                currentServoPosition -= 0.002;
-            }
+                axonServo.setPosition(0.0);
 
             currentServoPosition = Math.max(0.0, Math.min(1.0, currentServoPosition));
 
@@ -46,4 +45,5 @@ public class TestingAxonServo extends LinearOpMode {
             telemetry.update();
         }
     }
+}
 }
