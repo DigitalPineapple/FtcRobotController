@@ -18,7 +18,7 @@ import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 @TeleOp(name = "Field Qualifier TeleOp")
 public class QualifierTeleOpFieldCentric extends OpMode {
 
-    // Subsystem hardware declarations
+    //  hardware declarations
     private Follower follower;
     private ElapsedTime runtime = new ElapsedTime();
     private DcMotor intakeMotor;
@@ -103,7 +103,7 @@ public class QualifierTeleOpFieldCentric extends OpMode {
         }
         lastOptionsButton = currentOptionsButton;
 
-        // 2. FIELD-CENTRIC DRIVE MECHANICS
+        // 2. FIELD-CENTRIC DRIVING
         DrivePowers powers = ManualDrive.fieldCentric(
                 -gamepad1.left_stick_y,
                 -gamepad1.left_stick_x,
@@ -113,14 +113,14 @@ public class QualifierTeleOpFieldCentric extends OpMode {
         follower.manual(powers);
         follower.update();
 
-        // 3. INTAKE MOTOR TOGGLE (Left Bumper rising-edge)
+        // 3. INTAKE MOTOR
         boolean currentButtonState = gamepad1.left_bumper;
         if (currentButtonState && !lastButtonState) {
             motorIsSpinning = !motorIsSpinning;
         }
         lastButtonState = currentButtonState;
 
-        // 4. INTAKE & ELEVATOR RUN LOGIC (Right Bumper Override)
+        // 4. INTAKE & ELEVATOR REVERSE
         if (gamepad1.right_bumper) {
             intakeMotor.setPower(-RobotConfig.INTAKE_POWER);
             elevatorMotor.setPower(-RobotConfig.ELEVATOR_POWER);
@@ -132,7 +132,7 @@ public class QualifierTeleOpFieldCentric extends OpMode {
             elevatorMotor.setPower(0.0);
         }
 
-        // 5. FLOWER SERVO TOGGLE (Left Trigger sequential snap)
+        // 5. FLOWER SERVO
         boolean currentTriggerState = gamepad1.left_trigger > 0.5;
         if (currentTriggerState && !lastTriggerState) {
             if (currentServoPosition == RobotConfig.FLOWER_SERVO_DOWN_POSITION) {
@@ -144,7 +144,7 @@ public class QualifierTeleOpFieldCentric extends OpMode {
         lastTriggerState = currentTriggerState;
         flowerServo.setPosition(currentServoPosition);
 
-        // 6. GAMEPAD 2 SINGLE-CLICK VELOCITY ADJUSTMENTS (1500 Min / 2500 Max Bounds)
+        // 6. GAMEPAD 2 VELOCITY VARIABLES
         boolean currentGp2LeftTrigger = gamepad2.left_trigger > 0.5;
         boolean currentGp2LeftBumper = gamepad2.left_bumper;
         boolean currentGp2RightTrigger = gamepad2.right_trigger > 0.5;
@@ -179,7 +179,7 @@ public class QualifierTeleOpFieldCentric extends OpMode {
         lastGp2RightTrigger = currentGp2RightTrigger;
         lastGp2RightBumper = currentGp2RightBumper;
 
-        // 7. SHOOTER AUTOMATIC PRE-SPOOL CONTROL
+        // 7. SHOOTER VELOCITY CHECK
         boolean driverWantsToScore = gamepad1.x || gamepad1.b;
         if (driverWantsToScore) {
             pollenFlywheelMotor.setVelocity(pollenManualVelocity);
@@ -202,20 +202,21 @@ public class QualifierTeleOpFieldCentric extends OpMode {
         double nectarRequiredThreshold = nectarFullTarget * RobotConfig.SHOOTER_FULL_POWER_THRESHOLD;
         boolean nectarReady = currentNectarSpeed >= nectarRequiredThreshold;
 
-        // 8. POLLEN GATE CONTROL (Button X)
+        // 8. POLLEN GATE CONTROL
         if (gamepad1.x && pollenReady) {
             pollenGateServo.setPosition(RobotConfig.POLLEN_GATE_SERVO_OPEN_POSITION);
         } else {
             pollenGateServo.setPosition(RobotConfig.POLLEN_GATE_SERVO_CLOSED_POSITION);
         }
 
-        // 9. NECTAR GATE CONTROL (Button B)
+        // 9. NECTAR GATE CONTROL
         if (gamepad1.b && nectarReady) {
             nectarGateServo.setPosition(RobotConfig.NECTAR_GATE_SERVO_OPEN_POSITION);
         } else {
             nectarGateServo.setPosition(RobotConfig.NECTAR_GATE_SERVO_CLOSED_POSITION);
         }
 
+<<<<<<< Updated upstream
         telemetry.addData("Heading (deg)", Math.toDegrees(follower.pose().heading()));
         telemetry.addData("Pollen Target", Math.abs(pollenManualVelocity));
         telemetry.addData("Pollen Threshold", pollenRequiredThreshold);
@@ -225,6 +226,14 @@ public class QualifierTeleOpFieldCentric extends OpMode {
         telemetry.addData("Nectar Actual Vel", currentNectarSpeed);
 
 
+=======
+        // 10. TELEMETRY RESULTS
+        telemetry.addData("Heading", Math.toDegrees(follower.pose().heading()));
+        telemetry.addData("Pollen Target", pollenManualVelocity);
+        telemetry.addData("Nectar Target", nectarManualVelocity);
+        telemetry.addData("Pollen Vel", currentPollenSpeed + " / " + pollenRequiredThreshold);
+        telemetry.addData("Nectar Vel", currentNectarSpeed + " / " + nectarRequiredThreshold);
+>>>>>>> Stashed changes
         telemetry.addData("Runtime", runtime.toString());
         telemetry.update();
 
