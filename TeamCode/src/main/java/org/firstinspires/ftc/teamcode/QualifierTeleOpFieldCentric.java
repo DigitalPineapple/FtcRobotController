@@ -216,7 +216,6 @@ public class QualifierTeleOpFieldCentric extends OpMode {
             nectarGateServo.setPosition(RobotConfig.NECTAR_GATE_SERVO_CLOSED_POSITION);
         }
 
-<<<<<<< Updated upstream
         telemetry.addData("Heading (deg)", Math.toDegrees(follower.pose().heading()));
         telemetry.addData("Pollen Target", Math.abs(pollenManualVelocity));
         telemetry.addData("Pollen Threshold", pollenRequiredThreshold);
@@ -226,16 +225,6 @@ public class QualifierTeleOpFieldCentric extends OpMode {
         telemetry.addData("Nectar Actual Vel", currentNectarSpeed);
 
 
-=======
-        // 10. TELEMETRY RESULTS
-        telemetry.addData("Heading", Math.toDegrees(follower.pose().heading()));
-        telemetry.addData("Pollen Target", pollenManualVelocity);
-        telemetry.addData("Nectar Target", nectarManualVelocity);
-        telemetry.addData("Pollen Vel", currentPollenSpeed + " / " + pollenRequiredThreshold);
-        telemetry.addData("Nectar Vel", currentNectarSpeed + " / " + nectarRequiredThreshold);
->>>>>>> Stashed changes
-        telemetry.addData("Runtime", runtime.toString());
-        telemetry.update();
 
     }
 }
